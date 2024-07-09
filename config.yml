@@ -1,0 +1,54 @@
+# CONFIG
+
+# EXPERIMENT 
+device: 'cuda' # [Optional][cuda/cpu] device to run the deep learning models on
+filepath: '/home/shashank/repos/testing/' # [Required] base file path for all experiments
+exp_name: 'transformer_sentiment_lr_0001_layer_6' # [Required] experiment name
+exp_run: 2 # [Required] experiment run to compare
+# Final experiment directory would be: filepath/{exp_name}_{exp_run}/
+
+# DATA
+data:
+    train_datapath: '/home/shashank/repos/sentiment_classification/data/amazon_reviews_train.csv' # [Required] training data path
+    val_datapath: '/home/shashank/repos/sentiment_classification/data/amazon_reviews_val.csv' # [Required] validation data path
+    test_datapath: '/home/shashank/repos/sentiment_classification/data/amazon_reviews_test.csv' # [Required] testing data path
+    target: sentiment # [Required] target to perform classification on. Must be present as a column_name in adata.obs
+
+model:
+    type: 'transformer'
+    hyperparameters:
+        dim: 128
+        nlayers: 6
+        nheads: 8
+        dropout: 0.1
+        n_cls: 1
+        d_ff: 2048
+    start_checkpoint: False
+    resume_from_checkpoint: False
+
+training:  
+    mode: False
+    opt: 'adam'
+    loss: 'log'
+    batch_size: 16
+    lr: 1.0e-4
+    l2: 0
+    epochs: 25
+    callbacks:
+        early_stop_patience: 3
+        early_stop_min_delta: 1.0e-4
+        model_checkpoint_interval: 5
+
+testing: 
+    mode: True
+
+evaluation:
+    model_checkpoint: null
+    batch_size: 16
+    evaluation_metrics: ['accuracy', 'report']
+
+
+
+
+
+    
