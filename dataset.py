@@ -43,8 +43,9 @@ class SentimentDataset(Dataset):
 
 def collate_fn(batch):
     
-    max_len = min(max([batch[i]["encoder_input"].size(dim=0) for i in range(len(batch))]), 1000)
-    # max_len = 200
+    # restricting the mas seq_len in a batch to 500
+    max_len = min(max([batch[i]["encoder_input"].size(dim=0) for i in range(len(batch))]), 500)
+
     
     for i in range(len(batch)):
         batch[i]["encoder_input"] = batch[i]["encoder_input"][:max_len]

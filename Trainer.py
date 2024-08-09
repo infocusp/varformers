@@ -5,7 +5,6 @@ from torch import nn
 from torch.utils.data import Dataset, IterableDataset, DataLoader
 from utils.Callbacks import CallBack
 from time import time
-#from .tokenizer import tokenize_and_pad_batch
 
 from torch.utils.tensorboard import SummaryWriter
 

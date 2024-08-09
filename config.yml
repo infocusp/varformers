@@ -3,8 +3,8 @@
 # EXPERIMENT 
 device: 'cuda' # [Optional][cuda/cpu] device to run the deep learning models on
 filepath: '/home/shashank/repos/testing/' # [Required] base file path for all experiments
-exp_name: 'transformer_sentiment_lr_0001_layer_6' # [Required] experiment name
-exp_run: 2 # [Required] experiment run to compare
+exp_name: 'longformer_sentiment_lr_0001_layer_6' # [Required] experiment name
+exp_run: 3 # [Required] experiment run to compare
 # Final experiment directory would be: filepath/{exp_name}_{exp_run}/
 
 # DATA
@@ -15,7 +15,7 @@ data:
     target: sentiment # [Required] target to perform classification on. Must be present as a column_name in adata.obs
 
 model:
-    type: 'transformer'
+    type: 'longformer'
     hyperparameters:
         dim: 128
         nlayers: 6

@@ -3,9 +3,9 @@ import torch.nn as nn
 from torch.nn.functional import log_softmax
 import copy
 import math
-from einops import rearrange
 from functools import partial
-from performer import gaussian_orthogonal_random_matrix, exponential_kernel, simple_kernel, performer_attention
+from performer import PerformerAttention
+from longformer import LongformerSelfAttention, LongformerConfig
 
 def build_model(model_type, vocab_size, d_model, h, d_ff,
                 N, dropout, decoder_layers, device):
@@ -16,13 +16,32 @@ def build_model(model_type, vocab_size, d_model, h, d_ff,
         attn = MultiHeadedAttention(h, d_model)
     elif model_type=="performer":
         attn = PerformerAttention(d_model, h, device, dropout=dropout)
+    elif model_type=="longformer":
+        config = LongformerConfig(hidden_size = d_model,
+                 num_attention_heads = h,
+                 attention_probs_dropout_prob=dropout,
+                 attention_window = [8]*N, 
+                 attention_dilation = [1]*N)
+        
+        attn = partial(LongformerSelfAttention, config)
+        
     ff = PositionwiseFeedForward(d_model, d_ff, dropout)
-    position = PositionalEncoding(d_model, dropout)
+    position = PositionalEncoding(d_model, dropout)    
+    
+    encoder_list = []
+    for i in range(N):
+        if model_type=="longformer":
+            encoder_layer = EncoderLayer(d_model, c(attn(i)), c(ff), dropout)
+        else:
+            encoder_layer = EncoderLayer(d_model, c(attn), c(ff), dropout)
+        encoder_list.append(encoder_layer)
+    
+    encoder_list = nn.ModuleList(encoder_list)
     model = Transformer(
-        Encoder(EncoderLayer(d_model, c(attn), c(ff), dropout), N),
+        Encoder(encoder_list),
         ClsDecoder(*decoder_layers),
         nn.Sequential(Embeddings(d_model, vocab_size), c(position))
-    )
+    ) 
 
     # This was important from their code.
     # Initialize parameters with Glorot / fan_avg.
@@ -115,10 +134,10 @@ class Generator(nn.Module):
 class Encoder(nn.Module):
     "Core encoder is a stack of N layers"
 
-    def __init__(self, layer, N):
-        super(Encoder, self).__init__()
-        self.layers = clones(layer, N)
-        self.norm = LayerNorm(layer.size)
+    def __init__(self, layers):
+        super(Encoder, self).__init__()        
+        self.layers = layers
+        self.norm = LayerNorm(layers[0].size)
 
     def forward(self, x, mask):
         "Pass the input (and mask) through each layer in turn."
@@ -256,84 +275,3 @@ class ClsDecoder(nn.Module):
         x = self.out_layer(x)
         return self.sigmoid(x)
 
-class PerformerAttention(nn.Module):
-    def __init__(self, dim, heads, device,  
-                 generalized_attention = False,
-                 kernel_fn = nn.ReLU(), dropout = 0.1, 
-                 qkv_bias = True, attn_out_bias = True, ortho_scaling = 0, 
-                 auto_check_redraw = True, feature_redraw_interval = 1000
-    ):
-        super(PerformerAttention, self).__init__()
-        
-        assert dim % heads == 0, 'dimension must be divisible by number of heads'
-        dim_heads = dim // heads
-        inner_dim = dim_heads * heads        
-        nb_features = dim_heads // 2
-        self.dim_heads = dim_heads
-        self.nb_features = nb_features
-        self.ortho_scaling = ortho_scaling
-        self.generalized_attention = generalized_attention
-
-        self.create_projection = partial(gaussian_orthogonal_random_matrix, 
-                                         nb_rows = self.nb_features, nb_columns = self.dim_heads,
-                                         scaling = self.ortho_scaling, device=device)
-        
-        
-        self.register_buffer('projection_matrix', self.create_projection())
-
-        if generalized_attention:
-            self.generalized_attention = generalized_attention
-            self.kernel_fn = kernel_fn
-
-        self.heads = heads
-        self.to_q = nn.Linear(dim, inner_dim, bias = qkv_bias)
-        self.to_k = nn.Linear(dim, inner_dim, bias = qkv_bias)
-        self.to_v = nn.Linear(dim, inner_dim, bias = qkv_bias)
-        self.to_out = nn.Linear(inner_dim, dim, bias = attn_out_bias)
-        self.dropout = nn.Dropout(dropout)
-        
-        self.feature_redraw_interval = feature_redraw_interval
-        self.current_feature_interval = 0
-        self.auto_check_redraw = auto_check_redraw
-        
-    @torch.no_grad()
-    def redraw_projection_matrix(self, device):
-        projections = self.create_projection(device = device)
-        self.projection_matrix.copy_(projections)
-        del projections
-
-    def forward(self, x, mask):
-                        
-        b, n, _ = *x.shape,     
-        q, k, v = self.to_q(x), self.to_k(x), self.to_v(x)
-        
-        if mask is not None:
-            v.masked_fill_(mask, 0.)
-
-        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), (q, k, v))
-        
-        device = q.device
-
-        if self.generalized_attention:
-            create_kernel = partial(simple_kernel, kernel_fn = self.kernel_fn,
-                                    projection_matrix = self.projection_matrix, device = device)
-            q, k = map(create_kernel, (q, k))
-
-        else:
-            create_kernel = partial(exponential_kernel, projection_matrix = self.projection_matrix,
-                                    device = device)
-            q = create_kernel(q, is_query = True)
-            k = create_kernel(k, is_query = False)
-        
-        out = performer_attention(q, k, v)    
-        
-        out = rearrange(out, 'b h n d -> b n (h d)')
-        out =  self.to_out(out)
-        
-        self.current_feature_interval += 1
-        
-        if self.auto_check_redraw and self.current_feature_interval >= self.feature_redraw_interval:
-            self.projection_matrix = self.create_projection(device = device)
-            self.current_feature_interval = 0
-        
-        return self.dropout(out)

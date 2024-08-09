@@ -4,6 +4,89 @@ import math
 import torch
 from torch import nn
 from einops import rearrange, repeat
+from functools import partial
+
+class PerformerAttention(nn.Module):
+    def __init__(self, dim, heads, device,  
+                 generalized_attention = False,
+                 kernel_fn = nn.ReLU(), dropout = 0.1, 
+                 qkv_bias = True, attn_out_bias = True, ortho_scaling = 0, 
+                 auto_check_redraw = True, feature_redraw_interval = 1000
+    ):
+        super(PerformerAttention, self).__init__()
+        
+        assert dim % heads == 0, 'dimension must be divisible by number of heads'
+        dim_heads = dim // heads
+        inner_dim = dim_heads * heads        
+        nb_features = dim_heads // 2
+        self.dim_heads = dim_heads
+        self.nb_features = nb_features
+        self.ortho_scaling = ortho_scaling
+        self.generalized_attention = generalized_attention
+
+        self.create_projection = partial(gaussian_orthogonal_random_matrix, 
+                                         nb_rows = self.nb_features, nb_columns = self.dim_heads,
+                                         scaling = self.ortho_scaling, device=device)
+        
+        
+        self.register_buffer('projection_matrix', self.create_projection())
+
+        if generalized_attention:
+            self.generalized_attention = generalized_attention
+            self.kernel_fn = kernel_fn
+
+        self.heads = heads
+        self.to_q = nn.Linear(dim, inner_dim, bias = qkv_bias)
+        self.to_k = nn.Linear(dim, inner_dim, bias = qkv_bias)
+        self.to_v = nn.Linear(dim, inner_dim, bias = qkv_bias)
+        self.to_out = nn.Linear(inner_dim, dim, bias = attn_out_bias)
+        self.dropout = nn.Dropout(dropout)
+        
+        self.feature_redraw_interval = feature_redraw_interval
+        self.current_feature_interval = 0
+        self.auto_check_redraw = auto_check_redraw
+        
+    @torch.no_grad()
+    def redraw_projection_matrix(self, device):
+        projections = self.create_projection(device = device)
+        self.projection_matrix.copy_(projections)
+        del projections
+
+    def forward(self, x, mask):
+                        
+        b, n, _ = *x.shape,     
+        q, k, v = self.to_q(x), self.to_k(x), self.to_v(x)
+        
+        if mask is not None:
+            v.masked_fill_(mask, 0.)
+
+        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), (q, k, v))
+        
+        device = q.device
+
+        if self.generalized_attention:
+            create_kernel = partial(simple_kernel, kernel_fn = self.kernel_fn,
+                                    projection_matrix = self.projection_matrix, device = device)
+            q, k = map(create_kernel, (q, k))
+
+        else:
+            create_kernel = partial(exponential_kernel, projection_matrix = self.projection_matrix,
+                                    device = device)
+            q = create_kernel(q, is_query = True)
+            k = create_kernel(k, is_query = False)
+        
+        out = performer_attention(q, k, v)    
+        
+        out = rearrange(out, 'b h n d -> b n (h d)')
+        out =  self.to_out(out)
+        
+        self.current_feature_interval += 1
+        
+        if self.auto_check_redraw and self.current_feature_interval >= self.feature_redraw_interval:
+            self.projection_matrix = self.create_projection(device = device)
+            self.current_feature_interval = 0
+        
+        return self.dropout(out)
 
 
 def exponential_kernel(data, *, projection_matrix, is_query, normalize_data=True, eps=1e-4, device = None):
