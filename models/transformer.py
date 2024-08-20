@@ -4,8 +4,8 @@ from torch.nn.functional import log_softmax
 import copy
 import math
 from functools import partial
-from performer import PerformerAttention
-from longformer import LongformerSelfAttention, LongformerConfig
+from models.performer import PerformerAttention
+from models.longformer import LongformerSelfAttention, LongformerConfig
 
 def build_model(model_type, vocab_size, d_model, h, d_ff,
                 N, dropout, decoder_layers, device):
