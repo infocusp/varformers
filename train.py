@@ -1,16 +1,15 @@
 import os
 import sys
-import argparse
 import torch
 from torch import nn
 import numpy as np
 from torch.utils.data import DataLoader
-from helper import read_data, read_yaml, dump_yaml, dump_json
-from models import build_model
+from helper import read_data, read_yaml, dump_yaml
+from models.transformer import build_model
 
 from tokenizer import get_build_tokenizer
 from dataset import SentimentDataset, collate_fn
-from Trainer import Trainer
+from trainer import Trainer
 from utils.evaluation import predictions, accuracy, report, conf_matrix
 
 def main():   
