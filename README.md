@@ -36,7 +36,7 @@ A total of 120,000 samples were randomly selected, divided into training (80k), 
 This is a base Transformer architecture as described in the [Attention Is All You Need](https://arxiv.org/pdf/1706.03762) paper. In a typical Transformer, the model consists of an encoder-decoder structure. However, for a classification, we usually require just the encoder followed by Feed Forward Network using a classification head. For Transformer implementation, we will refer to [The Annotated Transformer](https://nlp.seas.harvard.edu/annotated-transformer/) tutorial which walks through the entire process of implementing the Transformer model from scratch using PyTorch providing extensive annotations and explanations for each part of the model.
 
 
-![](../experiments/Transformer.png)
+![alt text](../experiments/Transformer.png)
 
 ### Performer
 
