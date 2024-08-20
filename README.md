@@ -36,18 +36,18 @@ A total of 120,000 samples were randomly selected, divided into training (80k), 
 This is a base Transformer architecture as described in the [Attention Is All You Need](https://arxiv.org/pdf/1706.03762) paper. In a typical Transformer, the model consists of an encoder-decoder structure. However, for a classification, we usually require just the encoder followed by Feed Forward Network using a classification head. For Transformer implementation, we will refer to [The Annotated Transformer](https://nlp.seas.harvard.edu/annotated-transformer/) tutorial which walks through the entire process of implementing the Transformer model from scratch using PyTorch providing extensive annotations and explanations for each part of the model.
 
 
-![alt text](../experiments/Transformer.png)
+![alt text](images/Transformer.png)
+
 
 ### Performer
-
 The Performer addresses the quadratic complexity by introducing an efficient attention mechanism called FAVOR+ (Fast Attention Via Orthogonal Random features). It approximates the traditional softmax-based self-attention with linear complexity O(N) as shown in the image below. Instead of directly computing the dot product between all pairs of tokens, FAVOR+ uses kernel-based methods to project the input into a lower-dimensional space where interactions can be computed more efficiently. Performer utilizes random feature maps to approximate the softmax function. This technique enables it to compute attention using a linear number of operations relative to the sequence length, significantly reducing the memory footprint and computational cost.
 
-![](../experiments/performer.jpg)
+![alt text](images/performer.jpg)
 
 ### Longformer
 The Longformer modifies the Transformer architecture to handle long sequences effectively. Longformer introduces a sliding window attention mechanism, where each token attends to a fixed number of neighboring tokens within a sliding window, reducing the complexity from O(N^2) to O(N). Additionally, it incorporates dilated (or strided) attention, which allows tokens to attend to other tokens at regular intervals outside their immediate neighborhood, capturing broader context while still being efficient. For tasks requiring some tokens to attend globally across the entire sequence (e.g., classification tokens, question tokens in QA tasks), Longformer allows certain tokens to attend to all tokens in the sequence (global attention), while most tokens continue using the local sliding window attention. This hybrid approach balances efficiency with the ability to capture long-range dependencies when needed. As shown in the image below, all the tokens (along the diagonal) attend to their neighbouring tokens along with all the global tokens (for example CLS), and the global tokens attend all the tokens in the sequence. 
 
-![](../experiments/longformer.jpg)
+![alt text](images/longformer.jpg)
 
 ## Training Information
 
@@ -69,10 +69,10 @@ The table below provides a summary of the common key training parameters used to
 To evaluate the training performance of the three Transformer variants - Transformer, Performer, and Longformer, their validation loss and validation accuracy was compared on the validation dataset (against number of epochs). Here's a pictorial summary of the findings:
 
 ### Validation Loss
-![](../experiments/val_loss.jpeg)
+![alt text](images/val_loss.jpeg)
 
 ### Validation Accuracy
-![](../experiments/val_acc.jpeg)
+![alt text](images/val_acc.jpeg)
 
 The models were primarily assessed using accuracy metric since it was trained on a balanced dataset. 
 
