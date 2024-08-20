@@ -9,9 +9,9 @@ exp_run: 4 # [Required] experiment run to compare
 
 # DATA
 data:
-    train_datapath: '/home/shashank/repos/sentiment_classification/data/amazon_reviews_train.csv' # [Required] training data path
-    val_datapath: '/home/shashank/repos/sentiment_classification/data/amazon_reviews_val.csv' # [Required] validation data path
-    test_datapath: '/home/shashank/repos/sentiment_classification/data/amazon_reviews_test.csv' # [Required] testing data path
+    train_datapath: '/home/shashank/repos/varformers/data/amazon_reviews_train.csv' # [Required] training data path
+    val_datapath: '/home/shashank/repos/varformers/data/amazon_reviews_val.csv' # [Required] validation data path
+    test_datapath: '/home/shashank/repos/varformers/data/amazon_reviews_test.csv' # [Required] testing data path
     target: sentiment # [Required] target to perform classification on. Must be present as a column_name in adata.obs
 
 model:
