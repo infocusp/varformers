@@ -22,6 +22,9 @@
 
 This repository contains the implementation of two Transformer variants (Performer and Longformer) along with the base Transformer. These are more memory efficient variations proposed after the Transformer particularly when we have to deal with longer sequences. We have also compared their performance on a classification task. Specifically, we have focused on sentiment classification using only the encoder portion of the Transformer model, since the decoder is not needed for this task. The base transformer model is derived from the Annotated Transformer tutorial, and the two variants—Performer and Longformer—are implemented by modifying just the self-attention mechanism. The focus is on enhancing performance (both in terms of time and memory), and comparing the efficacy of these models on a sentiment classification dataset.
 
+
+For a deeper theoretical understanding, please refer to the blog post titled [Benchmarking Efficient Transformer Variants](https://www.infocusp.com/blogs/benchmarking-efficient-transformers-variants/) which covers these two vaiants along with the base Transformer. 
+
 ## Dataset
 
 The dataset used in this project consists of fashion product reviews, which was downloaded from [Amazon Reviews 2023](https://amazon-reviews-2023.github.io/). The dataset was labeled for binary sentiment classification as:
